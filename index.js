@@ -10,6 +10,8 @@ require('dotenv').config();
 // TODO: require console.table 
 
     const cTable = require('console.table');
+const { resourceLimits } = require('worker_threads');
+const { listenerCount } = require('events');
 
    // ? Maybe use easy table? 
 
@@ -18,7 +20,8 @@ const connection = mysql.createConnection({
     host: 'localhost',
     port: 3306,
     user: 'root',
-    password: process.env.DB_PASSWORD
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
 })
 
 // TODO: inquirer.prompt
@@ -36,39 +39,73 @@ function init() {
             
         }
     ]).then(answers => {
-        doLogic();
+        const { employeeStart } = answers
+        switch(employeeStart){
+            case 'View All Employees':
+                viewEmployees();
+                break;
+            case 'View All Employees By Department':
+                viewByDepartment();
+                break;
+            case 'View All Employees By Manager':
+                viewManagers();
+                break;
+            case 'Add Employee':
+                addEmployees();
+                break;
+            case 'Remove Employee':
+                removeEmployee();
+                break;
+            case 'Update Employee Role':
+                updateRole();
+                break;
+            case 'Update Employee Manager':
+                updateManager();
+                break;
+            case 'Exit':
+                default:
+                    connection.end()
+        }
     });
 };
 
-const doLogic = (initAnswer) => {
-    switch(initAnswer){
-        case 'View All Employees':
-            viewEmployees();
-            break;
-        case 'View All Employees By Department':
-            viewDepartment();
-            break;
-        case 'View All Employees By Manager':
-            viewManagers();
-            break;
-        case 'Add Employee':
-            addEmployees();
-            break;
-        case 'Remove Employee':
-            removeEmployee();
-            break;
-        case 'Update Employee Role':
-            updateRole();
-            break;
-        case 'Update Employee Manager':
-            updateManager();
-            break;
-        case 'Exit':
-            default:
-                connection.end()
-    }
-}
 
+const viewEmployees = () => {
+    connection.query('SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id;', (err,res) => {
+        if (err) throw err;
+        console.table(res);
+        init();
+    })
+    }
+
+
+function viewByDepartment() {
+   inquirer.prompt([
+       {
+           type: list,
+           name: departmentView,
+           message: `What department would you like to view?`,
+           choices: [`Sales`, `Engineering`, `Financial`, `Legal`]
+       }
+   ]).then(answers => {
+       const { departmentView } = answers
+        switch(departmentView){
+            case `Sales`:
+                viewSalesDepartment();
+                break;
+            case `Engineering`: 
+                viewEngineeringDepartment();
+                break;
+            case `Financial`:
+                viewFinancialDepartment();
+                break;
+            case `Legal`:
+                viewLegalDepartment();
+                break;
+        }
+
+   })
+}
 // TODO: View Departments
     //TODO: View roles
     //TODO: view employees
