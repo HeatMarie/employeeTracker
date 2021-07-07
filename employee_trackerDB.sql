@@ -73,12 +73,19 @@ INSERT INTO employee (first_name, last_name, role_id)
 	VALUE ('Haley', 'Volish', 3);
 
 INSERT INTO employee (first_name, last_name, role_id)
-	VALUE ('Haley', 'Volish', 2);
+	VALUE ('becky', 'French', 2);
+    
+INSERT INTO employee (first_name, last_name, role_id)
+	VALUE ('Jack', 'Ligoon', 4);
+    
+    SELECT * FROM employee;
+    
 	Select * From role;
     
-    SELECT * FROM employee LEFT JOIN role ON employee.id = role.id LEFT JOIN department ON role.id = department.id;
+	Select * From department;
     
-
-
+    SELECT * FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id;
+    
+SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE department = 'Sales';
 
 
