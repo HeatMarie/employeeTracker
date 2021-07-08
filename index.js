@@ -29,6 +29,9 @@ const connection = mysql.createConnection({
 //TODO: Add deparments
 //TODO: Add roles
 //TODO: Add employees
+let departmentsArray = []
+let rolesArray = []
+let employeesArray = []
 
 function init() {
     inquirer.prompt([
@@ -36,7 +39,7 @@ function init() {
             type: 'list',
             name: 'employeeStart',
             message: 'What would you like to do? ',
-            choices: ['View All Employees', 'View All Employees By Department', 'View All Employees By Manager', 'Add Employee', 'Add Department', 'Add Role', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Exit']
+            choices: ['View All Employees', 'View All Employees By Department', 'View All Employees By Role', 'Add Employee', 'Add Department', 'Add Role', 'Update Employee Role', 'Exit']
 
         }
     ]).then(answers => {
@@ -48,8 +51,8 @@ function init() {
             case 'View All Employees By Department':
                 viewByDepartment();
                 break;
-            case 'View All Employees By Manager':
-                viewManagers();
+            case 'View All Employees By Role':
+                viewRoles();
                 break;
             case 'Add Employee':
                 addEmployee();
@@ -60,14 +63,8 @@ function init() {
             case 'Add Role':
                 addRole();
                 break
-            case 'Remove Employee':
-                removeEmployee();
-                break;
             case 'Update Employee Role':
-                updateRole();
-                break;
-            case 'Update Employee Manager':
-                updateManager();
+                updateEmployeeRole();
                 break;
             case 'Exit':
             default:
@@ -79,6 +76,7 @@ function init() {
 
 const viewEmployees = () => {
     connection.query('SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id;', (err, res) => {
+
         if (err) throw err;
         console.table(res);
         init();
@@ -87,148 +85,158 @@ const viewEmployees = () => {
 
 
 function viewByDepartment() {
-    inquirer.prompt([
-        {
-            type: 'list',
-            name: 'departmentView',
-            message: `What department would you like to view?`,
-            choices: [`Sales`, `Engineering`, `Financial`, `Legal`]
-        }
-    ]).then(answers => {
-        const { departmentView } = answers
-        switch (departmentView) {
-            case `Sales`:
-                connection.query(`SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE department = 'Sales'`, (err, res) => {
-                    if (err) throw err;
-                    console.table(res);
-                    init();
-                })
-                break;
-            case `Engineering`:
-                connection.query(`SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE department = 'Engineering'`, (err, res) => {
-                    if (err) throw err;
-                    console.table(res);
-                    init();
-                })
-                break;
-            case `Financial`:
-                connection.query(`SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE department = 'Finance'`, (err, res) => {
-                    if (err) throw err;
-                    console.table(res);
-                    init();
-                })
-                break;
-            case `Legal`:
-                connection.query(`SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE department = 'Legal'`, (err, res) => {
-                    if (err) throw err;
-                    console.table(res);
-                    init();
-                })
-                break;
-        }
+    connection.query(`SELECT * FROM department`, (err, results) => {
+        if (err) throw err; 
 
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'departmentView',
+                message: `What department would you like to view?`,
+                choices:  results.map((result) => result.department)
+            }
+        ]).then(answers => {
+            const { departmentView } = answers
+
+                    connection.query(`SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE department ="${departmentView}"`, (err, res) => {
+                        if (err) throw err;
+                        console.table(res);
+                        init();
+                    })
+
+        })
+    })
+    
+}
+
+function viewRoles() {
+    connection.query(`SELECT * FROM role`, (err, results) => {
+        if (err) throw err; 
+
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'roleView',
+                message: `What department would you like to view?`,
+                choices:  results.map((result) => result.title)
+            }
+        ]).then(answers => {
+            const { roleView } = answers
+
+                    connection.query(`SELECT first_name, last_name, title, salary, department FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id WHERE title ="${roleView}"`, (err, res) => {
+                        if (err) throw err;
+                        console.table(res);
+                        init();
+                    })
+
+        })
+    })
+    
+}
+
+function updateEmployeeRole() {
+    
+    connection.query(`SELECT * FROM role`, (err, roles) => {
+        connection.query(`SELECT * FROM employee`, (err, results) => {
+            if (err) throw err;
+
+            inquirer.prompt([
+                {
+                    type: 'rawlist',
+                    name: 'employee',
+                    message: `Which employee do you want to update?`,
+                    choices: results.map((employee) => `${employee.first_name} ${employee.last_name}`)
+                },
+                {
+                    type: 'rawlist',
+                    name: 'role',
+                    message: `Which title do you want to give this employee?`,
+                    choices: roles.map((role) => role.title)
+                }
+            ]).then((answer) => {
+                const employeeFirst = answer.employee.split(" ")[0];
+                const employeeLast = answer.employee.split(" ")[1];
+                const role_id = roles.filter((role) => role.title === answer.role).map((role) => role.id)[0];
+
+                connection.query(`UPDATE employee SET role_id=${role_id} WHERE first_name="${employeeFirst}" AND last_name="${employeeLast}"`)
+
+                init();
+            });
+        })
     })
 }
 
 function addEmployee() {
-    inquirer.prompt([
-        {
-            type: 'input',
-            name: 'firstName',
-            message: `What is the new employee's first name?`
-        },
-        {
-            type: 'input',
-            name: 'lastName',
-            message: `What is the new employee's lasts name?`
-        },
-        {
-            type: 'list',
-            name: 'role',
-            message: `What is the new employee's role?`,
-            choices: ['Salesperson', 'Sales Lead', 'Software Engineer', 'Lead Engineer', 'Accountant', 'Account Manager', 'Lawyer', 'Legal Team Lead']
-        }
-    ]).then((answer) => {
-        switch(answer.role){
-            case 'Salesperson':
-                role = 2;
-                break;
-            case 'Sales Lead':
-                role = 1;
-                break;
-            case 'Software Engineer':
-                role = 4;
-                break;
-            case 'Lead Engineer':
-                role = 3;
-                break;
-            case 'Accountant':
-                role = 6;
-                break;
-            case 'Account Manager':
-                role = 5;
-                break;
-            case 'Lawyer':
-                role = 8;
-                break;
-            case 'Legal Team Lead':
-                role = 7;
-                break;
-        }
-        console.log(role)
-        connection.query(`INSERT INTO employee SET ?`,
+    connection.query(`SELECT * FROM role`, (err, results) => {
+        if (err) throw err;
+        inquirer.prompt([
             {
-                first_name: answer.firstName,
-                last_name: answer.lastName,
-                role_id: role
-
+                type: 'input',
+                name: 'firstName',
+                message: `What is the new employee's first name?`
             },
-        )
+            {
+                type: 'input',
+                name: 'lastName',
+                message: `What is the new employee's last name?`
+            },
+            {
+                type: 'rawlist',
+                name: 'role',
+                message: `What is the new employee's role?`,
+                choices: results.map((role) => role.title)
+            }
+           
+        ]).then((answer) => {
+            connection.query(`INSERT INTO employee SET ?`,
+                {
+                    first_name: answer.firstName,
+                    last_name: answer.lastName,
+                    role_id: results
+                                .filter((result) => result.title === answer.role)
+                                .map((result) => result.id)[0]
+                }
+            )
+
+            init();
+        })
     })
 }
 
 function addRole() {
-    inquirer.prompt([
-        {
-            type: 'input',
-            name: 'roleTitle',
-            message: 'What is the name of the new role you would like to add?'
-        },
-        {
-            type: 'input',
-            name: 'salary',
-            message: 'What is the salary of the new role?'
-        },
-        {
-            type: 'input',
-            name: 'departmentId',
-            message: 'What is the name of the Department?'
-        },
-    ]).then((answer) => {
-        switch(answer.departmentId){
-            case 'Sales':
-                departmentId = 1;
-                break;
-            case 'Engineering':
-                departmentId = 2;
-                break;
-            case 'Finance':
-                departmentId = 3;
-                break;
-            case 'Legal':
-                departmentId = 4;
-                break;
-        }
-    console.log(departmentId)
-    connection.query(`INSERT INTO role SET ?`, 
-    {
-        title: answer.roleTitle,
-        salary: answer.salary,
-        department_id: departmentId
-    },
-    )
+    connection.query(`SELECT * FROM department`, (err, results) => {
+        if (err) throw err;
+        inquirer.prompt([
+            {
+                type: 'input',
+                name: 'roleTitle',
+                message: 'What is the name of the new role you would like to add?'
+            },
+            {
+                type: 'input',
+                name: 'salary',
+                message: 'What is the salary of the new role?'
+            },
+            {
+                type: 'rawlist',
+                name: 'departmentId',
+                message: 'What is the name of the Department?',
+                choices: results.map((result) => result.department)
+            }
+        ]).then((answer) => {
+            connection.query(`INSERT INTO role SET ?`, 
+                {
+                    title: answer.roleTitle,
+                    salary: answer.salary,
+                    department_id: results
+                                    .filter((result) => result.department === answer.departmentId)
+                                    .map((result) => result.id)[0]
+                });
+                init();
+        })
     })
 }
+
 
 function addDepartment() {
     inquirer.prompt([
@@ -241,12 +249,12 @@ function addDepartment() {
         connection.query(`INSERT INTO department SET ?`,
         {
             department: answer.department
-        }
-        )
-    })
+        });
+        init();
+    });
 }
 
-// TODO: Update employee roles
+
 
 /*------------- BONUS ------------  */
 
